@@ -7,7 +7,6 @@ import {
   Scale,
   Globe,
   Shield,
-  Zap,
   Brain,
   ArrowRight
 } from 'lucide-react';
@@ -185,7 +184,7 @@ export function Features() {
         <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl shadow-2xl p-12 text-center text-white">
           <h2 className="text-3xl font-bold mb-4">Ready to Get Started?</h2>
           <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-            Join thousands of legal professionals using Vaakil AI to streamline their workflows
+            Join thousands of legal professionals using LAW AI to streamline their workflows
           </p>
           <Link
             to="/signup"

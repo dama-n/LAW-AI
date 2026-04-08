@@ -9,7 +9,7 @@ export function Pricing() {
       icon: Zap,
       price: '₹0',
       period: '/month',
-      description: 'Perfect for trying out Vaakil AI',
+      description: 'Perfect for trying out LAW AI',
       features: [
         '10 AI queries per month',
         'Access to 100+ templates',

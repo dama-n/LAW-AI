@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Navbar } from '../components/Navbar';
-import { Send, Sparkles, FileText, Scale, Loader2, Plus } from 'lucide-react';
+import { Send, Sparkles, Scale, Loader2, Plus } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 
@@ -23,7 +23,7 @@ export function AIAssistant() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -118,20 +118,32 @@ export function AIAssistant() {
       .single();
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/legal-ai`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({
-            message: userMessage,
-            conversation_id: currentConversationId,
-          }),
-        }
-      );
+      const endpoint = import.meta.env.DEV
+        ? '/api/legal-ai'
+        : `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/legal-ai`;
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (!import.meta.env.DEV) {
+        headers.Authorization = `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`;
+        headers.apikey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      }
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          message: userMessage,
+          conversation_id: currentConversationId,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`legal-ai failed (${response.status}): ${errorText}`);
+      }
 
       const data = await response.json();
 
@@ -149,10 +161,25 @@ export function AIAssistant() {
         setMessages([...messages, savedUserMessage, assistantMessage]);
       }
 
-      await supabase
-        .from('subscriptions')
-        .update({ queries_used: supabase.raw('queries_used + 1') })
-        .eq('user_id', user?.id);
+      // Best-effort usage tracking; should never break chat UX.
+      try {
+        if (user?.id) {
+          const { data: sub } = await supabase
+            .from('subscriptions')
+            .select('queries_used')
+            .eq('user_id', user.id)
+            .single();
+
+          if (sub) {
+            await supabase
+              .from('subscriptions')
+              .update({ queries_used: (sub.queries_used ?? 0) + 1 })
+              .eq('user_id', user.id);
+          }
+        }
+      } catch (usageError) {
+        console.warn('Failed to update queries_used', usageError);
+      }
     } catch (error) {
       console.error('Error:', error);
       const errorMessage: Message = {
@@ -220,7 +247,7 @@ export function AIAssistant() {
                     <Scale className="h-10 w-10 text-blue-600" />
                   </div>
                   <h2 className="text-2xl font-bold text-gray-900 mb-3">
-                    Welcome to Vaakil AI Assistant
+                    Welcome to LAW AI Assistant
                   </h2>
                   <p className="text-gray-600 mb-8">
                     Ask me anything about Indian law, legal procedures, or document drafting
@@ -302,7 +329,7 @@ export function AIAssistant() {
                 </button>
               </form>
               <p className="text-xs text-gray-500 mt-2 text-center">
-                Vaakil AI provides general legal information. For specific legal advice, consult a licensed attorney.
+                LAW AI provides general legal information. For specific legal advice, consult a licensed attorney.
               </p>
             </div>
           </div>

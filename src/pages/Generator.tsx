@@ -8,6 +8,7 @@ import { useAuth } from '../contexts/AuthContext';
 interface Template {
   id: string;
   title: string;
+  category?: string | null;
   content: string;
   variables: string[];
 }
@@ -23,7 +24,6 @@ export function Generator() {
   const [generatedDocument, setGeneratedDocument] = useState('');
   const [documentTitle, setDocumentTitle] = useState('');
   const [copied, setCopied] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -86,10 +86,25 @@ export function Generator() {
         input_data: formData,
       });
 
-      await supabase.raw(
-        'UPDATE legal_templates SET usage_count = usage_count + 1 WHERE id = ?',
-        [templateId]
-      );
+      // Best-effort increment of usage_count; should not break saving flow.
+      try {
+        if (templateId) {
+          const { data: tpl } = await supabase
+            .from('legal_templates')
+            .select('usage_count')
+            .eq('id', templateId)
+            .single();
+
+          if (tpl) {
+            await supabase
+              .from('legal_templates')
+              .update({ usage_count: (tpl.usage_count ?? 0) + 1 })
+              .eq('id', templateId);
+          }
+        }
+      } catch (usageError) {
+        console.warn('Failed to update template usage_count', usageError);
+      }
 
       alert('Document saved successfully!');
       navigate('/documents');

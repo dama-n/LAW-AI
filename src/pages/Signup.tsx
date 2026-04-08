@@ -44,7 +44,7 @@ export function Signup() {
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center space-x-2 mb-6">
             <Scale className="h-10 w-10 text-blue-600" />
-            <span className="text-3xl font-bold text-gray-900">Vaakil AI</span>
+            <span className="text-3xl font-bold text-gray-900">LAW AI</span>
           </Link>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Create your account</h1>
           <p className="text-gray-600">Start your journey with AI-powered legal assistance</p>

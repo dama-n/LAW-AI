@@ -11,6 +11,11 @@ interface RequestBody {
   conversation_id: string;
 }
 
+type GroqChatMessage = {
+  role: "system" | "user" | "assistant";
+  content: string;
+};
+
 const legalKnowledgeBase: Record<string, string> = {
   "consumer complaint": "To file a consumer complaint in India:\n1. Approach the District Consumer Forum for claims up to ₹1 crore\n2. State Consumer Commission for claims between ₹1-10 crores\n3. National Consumer Commission for claims above ₹10 crores\n\nRequired documents:\n- Copy of bill/receipt\n- Written complaint\n- Supporting evidence\n\nTime limit: Within 2 years from the date of cause of action.",
 
@@ -31,6 +36,52 @@ function findRelevantAnswer(query: string): string {
   }
 
   return "I understand you have a legal question. As an AI legal assistant for India, I can help with:\n\n• Legal procedures and processes\n• Understanding Indian laws (IPC, CrPC, Constitution)\n• Document drafting guidance\n• Contract basics\n• Legal research\n\nPlease note: This is general legal information, not legal advice. For specific legal matters, please consult a licensed attorney.\n\nCould you please be more specific about what you'd like to know?";
+}
+
+async function generateWithGroq(message: string): Promise<string> {
+  const groqApiKey = Deno.env.get("GROQ_API_KEY");
+  if (!groqApiKey) {
+    throw new Error("Missing GROQ_API_KEY");
+  }
+
+  const model = Deno.env.get("GROQ_MODEL") || "llama-3.1-8b-instant";
+
+  const messages: GroqChatMessage[] = [
+    {
+      role: "system",
+      content:
+        "You are LAW AI, a helpful assistant. Provide general legal information for India. " +
+        "Do not claim to be a lawyer. Be clear, structured, and include steps where relevant. " +
+        "If the user asks for jurisdiction outside India or requests definitive legal advice, recommend consulting a licensed attorney.",
+    },
+    { role: "user", content: message },
+  ];
+
+  const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${groqApiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      temperature: 0.3,
+      max_tokens: 700,
+    }),
+  });
+
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`Groq error (${resp.status}): ${text}`);
+  }
+
+  const data = await resp.json();
+  const content = data?.choices?.[0]?.message?.content;
+  if (!content || typeof content !== "string") {
+    throw new Error("Groq returned empty response");
+  }
+  return content.trim();
 }
 
 Deno.serve(async (req: Request) => {
@@ -57,9 +108,21 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const response = findRelevantAnswer(message);
+    let response: string;
+    const useGroq = (Deno.env.get("USE_GROQ") || "true").toLowerCase() !== "false";
 
-    const fullResponse = `${response}\n\n---\n💡 Tip: For AI-powered responses using GPT or Gemini, you can configure your API key in the settings. The current responses are based on a built-in knowledge base.`;
+    if (useGroq && Deno.env.get("GROQ_API_KEY")) {
+      try {
+        response = await generateWithGroq(message);
+      } catch (groqError) {
+        console.error("Groq failed, falling back to knowledge base:", groqError);
+        response = findRelevantAnswer(message);
+      }
+    } else {
+      response = findRelevantAnswer(message);
+    }
+
+    const fullResponse = `${response}\n\n---\nTip: If Groq is configured, replies come from Groq; otherwise a built-in knowledge base is used.`;
 
     return new Response(
       JSON.stringify({
