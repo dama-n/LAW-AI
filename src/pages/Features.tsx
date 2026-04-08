@@ -7,7 +7,6 @@ import {
   Scale,
   Globe,
   Shield,
-  Zap,
   Brain,
   ArrowRight
 } from 'lucide-react';

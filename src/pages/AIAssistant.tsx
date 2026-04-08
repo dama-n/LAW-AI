@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Navbar } from '../components/Navbar';
-import { Send, Sparkles, FileText, Scale, Loader2, Plus } from 'lucide-react';
+import { Send, Sparkles, Scale, Loader2, Plus } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 
@@ -23,7 +23,7 @@ export function AIAssistant() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -125,6 +125,7 @@ export function AIAssistant() {
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
           },
           body: JSON.stringify({
             message: userMessage,
@@ -132,6 +133,11 @@ export function AIAssistant() {
           }),
         }
       );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`legal-ai failed (${response.status}): ${errorText}`);
+      }
 
       const data = await response.json();
 
@@ -149,10 +155,25 @@ export function AIAssistant() {
         setMessages([...messages, savedUserMessage, assistantMessage]);
       }
 
-      await supabase
-        .from('subscriptions')
-        .update({ queries_used: supabase.raw('queries_used + 1') })
-        .eq('user_id', user?.id);
+      // Best-effort usage tracking; should never break chat UX.
+      try {
+        if (user?.id) {
+          const { data: sub } = await supabase
+            .from('subscriptions')
+            .select('queries_used')
+            .eq('user_id', user.id)
+            .single();
+
+          if (sub) {
+            await supabase
+              .from('subscriptions')
+              .update({ queries_used: (sub.queries_used ?? 0) + 1 })
+              .eq('user_id', user.id);
+          }
+        }
+      } catch (usageError) {
+        console.warn('Failed to update queries_used', usageError);
+      }
     } catch (error) {
       console.error('Error:', error);
       const errorMessage: Message = {
