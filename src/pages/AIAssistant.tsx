@@ -220,7 +220,7 @@ export function AIAssistant() {
                     <Scale className="h-10 w-10 text-blue-600" />
                   </div>
                   <h2 className="text-2xl font-bold text-gray-900 mb-3">
-                    Welcome to Vaakil AI Assistant
+                    Welcome to LAW AI Assistant
                   </h2>
                   <p className="text-gray-600 mb-8">
                     Ask me anything about Indian law, legal procedures, or document drafting
@@ -302,7 +302,7 @@ export function AIAssistant() {
                 </button>
               </form>
               <p className="text-xs text-gray-500 mt-2 text-center">
-                Vaakil AI provides general legal information. For specific legal advice, consult a licensed attorney.
+                LAW AI provides general legal information. For specific legal advice, consult a licensed attorney.
               </p>
             </div>
           </div>

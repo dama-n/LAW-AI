@@ -240,7 +240,7 @@ export function Home() {
             Ready to Transform Your Legal Work?
           </h2>
           <p className="text-xl text-gray-600 mb-8">
-            Join thousands of lawyers, law firms, and individuals using Vaakil AI
+            Join thousands of lawyers, law firms, and individuals using LAW AI
           </p>
           <Link
             to="/signup"
@@ -257,7 +257,7 @@ export function Home() {
           <div>
             <div className="flex items-center space-x-2 mb-4">
               <Scale className="h-6 w-6 text-blue-400" />
-              <span className="text-xl font-bold text-white">Vaakil AI</span>
+              <span className="text-xl font-bold text-white">LAW AI</span>
             </div>
             <p className="text-sm text-gray-400">
               India's first AI-powered legal assistant for modern legal practice
@@ -293,7 +293,7 @@ export function Home() {
         </div>
 
         <div className="max-w-7xl mx-auto mt-8 pt-8 border-t border-gray-800 text-center text-sm">
-          <p>&copy; 2024 Vaakil AI. All rights reserved.</p>
+          <p>&copy; 2024 LAW AI. All rights reserved.</p>
         </div>
       </footer>
     </div>
