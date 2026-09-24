@@ -111,6 +111,14 @@ function lawAiGroqProxyPlugin() {
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react(), lawAiGroqProxyPlugin()],
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+      },
+    },
+  },
   optimizeDeps: {
     exclude: ['lucide-react'],
   },

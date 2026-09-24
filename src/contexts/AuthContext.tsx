@@ -1,6 +1,15 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+
+type User = {
+  id: string;
+  email: string;
+  fullName: string;
+};
+
+type Session = {
+  user: User | null;
+};
 
 interface AuthContextType {
   user: User | null;
@@ -21,17 +30,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
+      setSession(session ?? null);
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      (async () => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-      })();
+      setSession(session ?? null);
+      setUser(session?.user ?? null);
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -39,26 +46,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
-      const { error: signUpError, data } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-
-      if (signUpError) return { error: signUpError };
-
-      if (data.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: data.user.id,
-            full_name: fullName,
-            role: 'individual',
-          });
-
-        if (profileError) return { error: profileError };
+      const result = await supabase.auth.signUp(email, password, fullName);
+      if (!result.error && result.data?.user) {
+        const nextSession = { user: result.data.user } as Session;
+        setSession(nextSession);
+        setUser(result.data.user);
+        setLoading(false);
       }
-
-      return { error: null };
+      return { error: result.error ?? null };
     } catch (error) {
       return { error: error as Error };
     }
@@ -66,11 +61,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      return { error };
+      const result = await supabase.auth.signInWithPassword({ email, password });
+      if (!result.error && result.data?.user) {
+        const nextSession = { user: result.data.user } as Session;
+        setSession(nextSession);
+        setUser(result.data.user);
+        setLoading(false);
+      }
+      return { error: result.error ?? null };
     } catch (error) {
       return { error: error as Error };
     }
@@ -78,15 +76,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
   };
 
   const signInWithGoogle = async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/dashboard`,
-      },
-    });
+    await supabase.auth.signInWithOAuth();
   };
 
   return (
